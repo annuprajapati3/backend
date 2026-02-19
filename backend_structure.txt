@@ -1,0 +1,101 @@
+📘 API Documentation
+
+Base URL:
+
+http://localhost:5000/api/auth
+
+🔐 1. Authentication APIs
+📝 1.1 Signup
+➤ Endpoint
+POST /signup
+
+➤ Description
+
+Register a new patient or doctor.
+
+➤ Headers
+Content-Type: application/json
+
+🧑 Patient Signup Request Body
+{
+  "name": "Rahul",
+  "email": "rahul@gmail.com",
+  "password": "123456",
+  "role": "patient"
+}
+
+👨‍⚕️ Doctor Signup Request Body
+{
+  "name": "Dr John",
+  "email": "drjohn@gmail.com",
+  "password": "123456",
+  "role": "doctor"
+}
+
+✅ Success Response
+{
+  "message": "Registered successfully"
+}
+
+🔑 1.2 Login
+➤ Endpoint
+POST /login
+
+➤ Description
+
+Login as patient or doctor.
+
+➤ Headers
+Content-Type: application/json
+
+➤ Request Body
+{
+  "email": "drjohn@gmail.com",
+  "password": "123456"
+}
+
+✅ Success Response
+{
+  "message": "Login successful",
+  "token": "TOKEN_HERE",
+  "role": "doctor"
+}
+
+🔒 2. Protected API
+👤 2.1 Get Logged-in User Profile
+📝 2.1.1 For Patient
+➤ Endpoint
+GET /patient
+
+➤ Description
+
+Returns details of logged-in patient.
+
+➤ Headers (Required)
+Authorization: Bearer TOKEN_HERE
+
+✅ Response Example 
+{
+    "message": "Welcome Patient Dashboard",
+    "role": "patient",
+    "name": "Rahul",
+    "email": "rahul@gmail.com"
+}
+📝 2.1.2 For Doctor
+➤ Endpoint
+GET /doctor
+
+➤ Description
+
+Returns details of logged-in doctor.
+
+➤ Headers (Required)
+Authorization: Bearer TOKEN_HERE
+
+✅ Response Example 
+{
+    "message": "Welcome Doctor Dashboard",
+    "role": "doctor",
+    "name": "Dr John",
+    "email": "drjohn@gmail.com"
+}
