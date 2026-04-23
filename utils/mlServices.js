@@ -3,7 +3,7 @@ const FormData = require("form-data");
 const fs = require("fs");
 const path = require("path");
 
-const ML_BASE = process.env.ML_BASE;
+const ML_BASE = process.env.ML_BASE || "https://watermarking-byiy.onrender.com";
 
 
 // 🔹 EMBED API (already correct)
