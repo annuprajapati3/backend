@@ -99,3 +99,78 @@ Authorization: Bearer TOKEN_HERE
     "name": "Dr John",
     "email": "drjohn@gmail.com"
 }
+
+3. Image & Report APIs
+📤 3.1 Upload Image (Patient)
+➤ Endpoint
+POST /image/upload
+➤ Description
+
+Patient uploads medical image + report → system embeds watermark using ML.
+
+➤ Headers
+Authorization: Bearer TOKEN_HERE
+Content-Type: multipart/form-data
+➤ Body (form-data)
+Key	Type	Value
+file	File	image.png
+report	Text	patient report data
+patientName	Text	Rahul
+doctorId	Text	Doctor MongoDB ID
+✅ Response
+{
+  "message": "Upload successful",
+  "data": {
+    "_id": "image_id",
+    "patientName": "Rahul",
+    "reportText": "patient report data",
+    "originalImageUrl": "/uploads/original.png",
+    "watermarkedImageUrl": "/uploads/wm.png",
+    "createdAt": "2026-04-23T07:13:56.478Z"
+  }
+}
+📄 3.2 Get Images (Doctor Dashboard)
+➤ Endpoint
+GET /image/list
+➤ Description
+
+Doctor fetches all reports uploaded for them.
+
+➤ Headers
+Authorization: Bearer TOKEN_HERE
+✅ Response
+[
+  {
+    "_id": "image_id",
+    "patientName": "Rahul",
+    "reportText": "patient report data",
+    "originalImageUrl": "/uploads/original.png",
+    "watermarkedImageUrl": "/uploads/wm.png",
+    "createdAt": "2026-04-23T07:13:56.478Z"
+  }
+]
+🔍 3.3 Verify Image (Doctor)
+➤ Endpoint
+POST /image/verify
+➤ Description
+
+Doctor verifies image authenticity using ML model.
+
+➤ Headers
+Authorization: Bearer TOKEN_HERE
+Content-Type: application/json
+➤ Request Body
+{
+  "imageId": "IMAGE_ID_HERE"
+}
+✅ Response
+{
+  "status": "SAFE",
+  "details": {
+    "geometric_check": "Safe",
+    "integrity_check": "Authentic",
+    "psnr": 79.64,
+    "mse": 0,
+    "ssim": 1
+  }
+}

@@ -54,6 +54,7 @@ router.get("/doctors", async (req, res) => {
       .populate("userId", "name email");
 
     const formattedDoctors = doctors.map((doc) => ({
+      dr_id: doc.userId._id,
       name: doc.userId?.name,
       email: doc.userId?.email,
       qualification: doc.qualification,
