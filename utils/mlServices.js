@@ -3,21 +3,19 @@ const FormData = require("form-data");
 const fs = require("fs");
 const path = require("path");
 
-// ✅ Use env or fallback
-const ML_BASE =
-  process.env.ML_BASE || "https://watermarking-byiy.onrender.com";
+// ✅ FIXED ML BASE
+const ML_BASE = "https://watermarking-1-oi51.onrender.com";
 
 
-// 🔹 EMBED API (Image + Text → Watermarked Image)
+// 🔹 EMBED API
 exports.callEmbedAPI = async (file, report) => {
   try {
-    // ✅ Ensure uploads folder exists
     const uploadDir = path.join(process.cwd(), "uploads");
+
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir);
     }
 
-    // ✅ Create temp file
     const tempPath = path.join(
       uploadDir,
       "temp_" + Date.now() + "_" + file.originalname
@@ -27,21 +25,20 @@ exports.callEmbedAPI = async (file, report) => {
 
     const formData = new FormData();
 
-    // ✅ Correct fields
+    // ✅ correct fields
     formData.append("file", fs.createReadStream(tempPath));
     formData.append("text", report);
 
     const res = await axios.post(
-      `${ML_BASE}/api/embed`, // ✅ FIXED ENDPOINT
+      `${ML_BASE}/embed`,   // ✅ CORRECT
       formData,
       {
         headers: formData.getHeaders(),
         responseType: "arraybuffer",
-        timeout: 60000 // important for Render
+        timeout: 60000
       }
     );
 
-    // 🧹 delete temp file
     fs.unlinkSync(tempPath);
 
     return res.data;
@@ -57,12 +54,12 @@ exports.callEmbedAPI = async (file, report) => {
 };
 
 
-// 🔹 EXTRACT API (Original + Watermarked → Verification)
+// 🔹 EXTRACT API
 exports.callExtractAPI = async (originalPath, watermarkedPath) => {
   try {
     const formData = new FormData();
 
-    // ✅ EXACT field names (from your ML Swagger)
+    // ✅ correct fields (from your docs)
     formData.append(
       "original_file",
       fs.createReadStream(originalPath)
@@ -74,7 +71,7 @@ exports.callExtractAPI = async (originalPath, watermarkedPath) => {
     );
 
     const res = await axios.post(
-      `${ML_BASE}/api/extract`, // ✅ FIXED ENDPOINT
+      `${ML_BASE}/extract`,   // ✅ CORRECT
       formData,
       {
         headers: formData.getHeaders(),
