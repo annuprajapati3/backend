@@ -1,3 +1,5 @@
+//controllers/imageController.js
+
 const Image = require("../models/Image");
 const { callEmbedAPI, callExtractAPI } = require("../utils/mlServices");
 
@@ -111,29 +113,33 @@ exports.getImages = async (req, res) => {
 
 // 🔹 VERIFY IMAGE (DOCTOR)
 
-
 exports.verifyImage = async (req, res) => {
   try {
     const { imageId } = req.body;
-    const doctorId = req.user.id;
+    const doctorId = req.user.id || req.user._id;
 
-    // 🔹 Get image for this doctor
+    // 🔹 Get image
     const image = await Image.findOne({
       _id: imageId,
       doctorId
     });
 
     if (!image) {
-      return res.status(403).json({
-        msg: "Unauthorized"
-      });
+      return res.status(403).json({ msg: "Unauthorized" });
     }
 
-    // 🔥 FIX: Convert URL → REAL PATH
-    const originalPath = path.join(process.cwd(), image.originalImageUrl);
-    const watermarkedPath = path.join(process.cwd(), image.watermarkedImageUrl);
+    // ✅ IMPORTANT FIX: extract only filename (safe fallback)
+    const originalFileName = path.basename(image.originalImageUrl);
+    const watermarkedFileName = path.basename(image.watermarkedImageUrl);
 
-    // 🔍 DEBUG LOGS (VERY IMPORTANT)
+    // ✅ Build correct absolute path (NO duplication, NO URL confusion)
+    const uploadDir = path.join(process.cwd(), "uploads");
+
+    const originalPath = path.join(uploadDir, originalFileName);
+    const watermarkedPath = path.join(uploadDir, watermarkedFileName);
+
+    // 🔍 DEBUG
+    console.log("UPLOAD DIR:", uploadDir);
     console.log("Original Path:", originalPath);
     console.log("Watermarked Path:", watermarkedPath);
 
@@ -143,14 +149,13 @@ exports.verifyImage = async (req, res) => {
     console.log("Original Exists:", originalExists);
     console.log("Watermarked Exists:", watermarkedExists);
 
-    // 🚨 HANDLE MISSING FILES
     if (!originalExists || !watermarkedExists) {
       return res.status(400).json({
-        error: "Files not found on server (Render deletes uploads). Upload again."
+        error: "File missing on server (Render ephemeral storage issue)"
       });
     }
 
-    // 🔹 Call ML Extract API
+    // 🔥 Call ML API
     const mlRes = await callExtractAPI(originalPath, watermarkedPath);
 
     const status =
@@ -158,13 +163,13 @@ exports.verifyImage = async (req, res) => {
         ? "SAFE"
         : "TAMPERED";
 
-    res.json({
+    return res.json({
       status,
       details: mlRes
     });
 
   } catch (err) {
-    console.error("Verify Controller Error:", err.message);
-    res.status(500).json({ error: err.message });
+    console.error("VERIFY ERROR:", err.message);
+    return res.status(500).json({ error: err.message });
   }
 };
