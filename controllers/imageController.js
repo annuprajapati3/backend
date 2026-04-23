@@ -108,14 +108,23 @@ exports.verifyImage = async (req, res) => {
     const originalFile = image.originalImageUrl;
     const watermarkedFile = image.watermarkedImageUrl;
 
+    console.log("VERIFYING IMAGE:", {
+      imageId,
+      doctorId,
+      originalFile,
+      watermarkedFile
+    });
+
     // 🔥 BUILD SAFE PATH
     const originalPath = path.join(UPLOAD_DIR, originalFile);
     const watermarkedPath = path.join(UPLOAD_DIR, watermarkedFile);
 
-    
+    console.log("VERIFYING IMAGE PATHS:", { originalPath, watermarkedPath }); 
 
     const originalExists = fs.existsSync(originalPath);
     const watermarkedExists = fs.existsSync(watermarkedPath);
+
+    console.log("FILE EXISTENCE:", { originalExists, watermarkedExists });  
 
     if (!originalExists || !watermarkedExists) {
       return res.status(400).json({
