@@ -35,9 +35,13 @@ exports.callEmbedAPI = async (file, report) => {
     return res.data;
 
   } catch (error) {
-    console.error("Embed API Error:", error.response?.data || error.message);
-    throw new Error("Embed API failed");
-  }
+  console.error(
+    "Embed API FULL ERROR:",
+    JSON.stringify(error.response?.data, null, 2)
+  );
+
+  throw new Error("Embed API failed");
+}
 };
 
 
