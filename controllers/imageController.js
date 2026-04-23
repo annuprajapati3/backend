@@ -69,7 +69,14 @@ exports.uploadImage = async (req, res) => {
 
     res.json({
       message: "Upload successful",
-      
+      data: {
+        _id: newImage._id,
+        patientName: newImage.patientName,
+        reportText: newImage.reportText,
+
+        originalImageUrl: formatImageUrl(originalFileName),
+        watermarkedImageUrl: formatImageUrl(watermarkedFileName)
+      }
     });
 
   } catch (err) {
@@ -105,12 +112,11 @@ exports.verifyImage = async (req, res) => {
     const originalPath = path.join(UPLOAD_DIR, originalFile);
     const watermarkedPath = path.join(UPLOAD_DIR, watermarkedFile);
 
-    console.log(originalPath, watermarkedPath);
+    
 
     const originalExists = fs.existsSync(originalPath);
     const watermarkedExists = fs.existsSync(watermarkedPath);
 
-    console.log("FILE CHECK:", { originalExists, watermarkedExists });
     if (!originalExists || !watermarkedExists) {
       return res.status(400).json({
         error: "File missing for verification"
