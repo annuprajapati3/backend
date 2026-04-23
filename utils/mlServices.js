@@ -3,39 +3,50 @@ const FormData = require("form-data");
 const fs = require("fs");
 const path = require("path");
 
-const ML_BASE = process.env.ML_BASE || "https://watermarking-byiy.onrender.com";
+// ✅ Use env or fallback
+const ML_BASE =
+  process.env.ML_BASE || "https://watermarking-byiy.onrender.com";
 
 
-// 🔹 EMBED API (already correct)
+// 🔹 EMBED API (Image + Text → Watermarked Image)
 exports.callEmbedAPI = async (file, report) => {
   try {
+    // ✅ Ensure uploads folder exists
+    const uploadDir = path.join(process.cwd(), "uploads");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir);
+    }
+
+    // ✅ Create temp file
     const tempPath = path.join(
-      __dirname,
-      "../uploads/temp_" + Date.now() + "_" + file.originalname
+      uploadDir,
+      "temp_" + Date.now() + "_" + file.originalname
     );
 
     fs.writeFileSync(tempPath, file.buffer);
 
     const formData = new FormData();
 
+    // ✅ Correct fields
     formData.append("file", fs.createReadStream(tempPath));
     formData.append("text", report);
 
     const res = await axios.post(
-      `${ML_BASE}/embed`,
+      `${ML_BASE}/api/embed`, // ✅ FIXED ENDPOINT
       formData,
       {
         headers: formData.getHeaders(),
-        responseType: "arraybuffer"
+        responseType: "arraybuffer",
+        timeout: 60000 // important for Render
       }
     );
 
+    // 🧹 delete temp file
     fs.unlinkSync(tempPath);
 
     return res.data;
 
-  }catch (error) {
-    // ✅ ADD HERE
+  } catch (error) {
     console.error(
       "Embed API FULL ERROR:",
       JSON.stringify(error.response?.data, null, 2)
@@ -46,20 +57,28 @@ exports.callEmbedAPI = async (file, report) => {
 };
 
 
-// 🔹 EXTRACT API (FINAL FIX HERE)
+// 🔹 EXTRACT API (Original + Watermarked → Verification)
 exports.callExtractAPI = async (originalPath, watermarkedPath) => {
   try {
     const formData = new FormData();
 
-    // ✅ EXACT FIELD NAMES (FROM YOUR SWAGGER)
-    formData.append("original_file", fs.createReadStream(originalPath));
-    formData.append("watermarked_file", fs.createReadStream(watermarkedPath));
+    // ✅ EXACT field names (from your ML Swagger)
+    formData.append(
+      "original_file",
+      fs.createReadStream(originalPath)
+    );
+
+    formData.append(
+      "watermarked_file",
+      fs.createReadStream(watermarkedPath)
+    );
 
     const res = await axios.post(
-      `${ML_BASE}/extract`,
+      `${ML_BASE}/api/extract`, // ✅ FIXED ENDPOINT
       formData,
       {
-        headers: formData.getHeaders()
+        headers: formData.getHeaders(),
+        timeout: 60000
       }
     );
 
@@ -67,7 +86,7 @@ exports.callExtractAPI = async (originalPath, watermarkedPath) => {
 
   } catch (error) {
     console.error(
-      "Extract API Error:",
+      "Extract API FULL ERROR:",
       JSON.stringify(error.response?.data, null, 2)
     );
 
