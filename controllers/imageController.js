@@ -1,7 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 const Image = require("../models/Image");
-const { callExtractAPI } = require("../utils/mlService");
+const { callExtractAPI } = require("../utils/mlServices");
 
 exports.verifyImage = async (req, res) => {
   try {
