@@ -105,11 +105,12 @@ exports.verifyImage = async (req, res) => {
     const originalPath = path.join(UPLOAD_DIR, originalFile);
     const watermarkedPath = path.join(UPLOAD_DIR, watermarkedFile);
 
-    
+    console.log(originalPath, watermarkedPath);
 
     const originalExists = fs.existsSync(originalPath);
     const watermarkedExists = fs.existsSync(watermarkedPath);
 
+    console.log("FILE CHECK:", { originalExists, watermarkedExists });
     if (!originalExists || !watermarkedExists) {
       return res.status(400).json({
         error: "File missing for verification"
