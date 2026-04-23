@@ -113,12 +113,13 @@ exports.getImages = async (req, res) => {
 
 // 🔹 VERIFY IMAGE (DOCTOR)
 
+
+
 exports.verifyImage = async (req, res) => {
   try {
     const { imageId } = req.body;
     const doctorId = req.user.id || req.user._id;
 
-    // 🔹 Get image
     const image = await Image.findOne({
       _id: imageId,
       doctorId
@@ -128,18 +129,20 @@ exports.verifyImage = async (req, res) => {
       return res.status(403).json({ msg: "Unauthorized" });
     }
 
-    // ✅ IMPORTANT FIX: extract only filename (safe fallback)
-    const originalFileName = path.basename(image.originalImageUrl);
-    const watermarkedFileName = path.basename(image.watermarkedImageUrl);
+    // 🔥 STEP 1: CLEAN FILE NAMES ONLY (NO PATHS)
+    const originalFile = path.basename(image.originalImageUrl);
+    const watermarkedFile = path.basename(image.watermarkedImageUrl);
 
-    // ✅ Build correct absolute path (NO duplication, NO URL confusion)
+    // 🔥 STEP 2: FIX DUPLICATION ISSUE (REMOVE uploads/uploads BUG)
     const uploadDir = path.join(process.cwd(), "uploads");
 
-    const originalPath = path.join(uploadDir, originalFileName);
-    const watermarkedPath = path.join(uploadDir, watermarkedFileName);
+    const originalPath = path.resolve(uploadDir, originalFile);
+    const watermarkedPath = path.resolve(uploadDir, watermarkedFile);
 
     // 🔍 DEBUG
     console.log("UPLOAD DIR:", uploadDir);
+    console.log("Original File:", originalFile);
+    console.log("Watermarked File:", watermarkedFile);
     console.log("Original Path:", originalPath);
     console.log("Watermarked Path:", watermarkedPath);
 
@@ -149,13 +152,16 @@ exports.verifyImage = async (req, res) => {
     console.log("Original Exists:", originalExists);
     console.log("Watermarked Exists:", watermarkedExists);
 
+    console.log("FILE SAVED AT:", originalPath);
+console.log("FILE EXISTS AFTER WRITE:", fs.existsSync(originalPath));
+
     if (!originalExists || !watermarkedExists) {
       return res.status(400).json({
-        error: "File missing on server (Render ephemeral storage issue)"
+        error: "File missing on server (Render storage is not persistent OR path issue)"
       });
     }
 
-    // 🔥 Call ML API
+    // 🔥 STEP 3: CALL ML API
     const mlRes = await callExtractAPI(originalPath, watermarkedPath);
 
     const status =
