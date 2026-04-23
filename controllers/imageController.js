@@ -101,7 +101,7 @@ exports.verifyImage = async (req, res) => {
     });
 
     if (!image) {
-      return res.status(403).json({ msg: "Unauthorized" });
+      return res.status(403).json({ msg: "Image not found" });
     }
 
     // 🔥 CLEAN FILE NAMES (NO PATH BUG)
@@ -112,19 +112,14 @@ exports.verifyImage = async (req, res) => {
     const originalPath = path.join(UPLOAD_DIR, originalFile);
     const watermarkedPath = path.join(UPLOAD_DIR, watermarkedFile);
 
-    console.log("UPLOAD DIR:", UPLOAD_DIR);
-    console.log("Original Path:", originalPath);
-    console.log("Watermarked Path:", watermarkedPath);
+    
 
     const originalExists = fs.existsSync(originalPath);
     const watermarkedExists = fs.existsSync(watermarkedPath);
 
-    console.log("Original Exists:", originalExists);
-    console.log("Watermarked Exists:", watermarkedExists);
-
     if (!originalExists || !watermarkedExists) {
       return res.status(400).json({
-        error: "File missing on server (Render storage issue or redeploy reset)"
+        error: "File missing for verification"
       });
     }
 
