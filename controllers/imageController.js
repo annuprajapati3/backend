@@ -138,6 +138,14 @@ exports.verifyImage = async (req, res) => {
       image.originalImageUrl,
       image.watermarkedImageUrl
     );
+    console.log("Original URL:", image.originalImageUrl);
+console.log("Watermarked URL:", image.watermarkedImageUrl);
+
+const originalPath = path.join(process.cwd(), image.originalImageUrl);
+const watermarkedPath = path.join(process.cwd(), image.watermarkedImageUrl);
+
+console.log("Original Path:", originalPath);
+console.log("Watermarked Path:", watermarkedPath);
 
     const status =
       mlRes.integrity_check === "Authentic"
