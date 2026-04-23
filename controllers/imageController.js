@@ -69,14 +69,7 @@ exports.uploadImage = async (req, res) => {
 
     res.json({
       message: "Upload successful",
-      data: {
-        _id: newImage._id,
-        patientName: newImage.patientName,
-        reportText: newImage.reportText,
-
-        originalImageUrl: formatImageUrl(originalFileName),
-        watermarkedImageUrl: formatImageUrl(watermarkedFileName)
-      }
+      
     });
 
   } catch (err) {
