@@ -124,7 +124,9 @@ exports.uploadMedicalImage = async (req, res) => {
     // =========================
     res.status(200).json({
       message: "Upload successful",
-      data: savedImage,
+      
+      originalImage: originalUpload.secure_url,
+      watermarkedImage: watermarkedUpload.secure_url,
     });
 
   } catch (error) {
