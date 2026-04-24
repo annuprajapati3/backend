@@ -164,6 +164,7 @@ exports.getDoctorImages = async (req, res) => {
 exports.verifyImage = async (req, res) => {
   try {
     const imageId = req.params.id;
+    const loggedInDoctorId = req.user.id;
 
     const image = await Image.findById(imageId);
 
@@ -173,9 +174,17 @@ exports.verifyImage = async (req, res) => {
       });
     }
 
+    // SECURITY CHECK:
+    // Only assigned doctor can verify
+    if (image.doctorId.toString() !== loggedInDoctorId) {
+      return res.status(403).json({
+        error: "Access denied. This image does not belong to you.",
+      });
+    }
+
     const form = new FormData();
 
-    // original image stream
+    // Original image stream
     const originalStream = await axios.get(
       image.originalImage,
       {
@@ -183,7 +192,7 @@ exports.verifyImage = async (req, res) => {
       }
     );
 
-    // watermarked image stream
+    // Watermarked image stream
     const watermarkedStream = await axios.get(
       image.watermarkedImage,
       {
@@ -201,9 +210,7 @@ exports.verifyImage = async (req, res) => {
       watermarkedStream.data
     );
 
-    // =========================
-    // Call ML API (/extract)
-    // =========================
+    // Call ML API
     const extractResponse = await axios.post(
       "https://watermarking-1-oi51.onrender.com/extract",
       form,
@@ -212,9 +219,7 @@ exports.verifyImage = async (req, res) => {
       }
     );
 
-    // =========================
     // Save verification result
-    // =========================
     image.verificationResult = {
       geometric_check: extractResponse.data.geometric_check,
       integrity_check: extractResponse.data.integrity_check,
