@@ -148,7 +148,14 @@ exports.getDoctorImages = async (req, res) => {
       doctorId: req.user.id,
     }).sort({ createdAt: -1 });
 
-    res.status(200).json(images);
+    res.status(200).json({
+      status : images.status,
+      image_id : images._id,
+      patient_name : images.patientName,
+      original_image : images.originalImage,
+      watermarked_image : images.watermarkedImage,
+
+    });
 
   } catch (error) {
     console.log("LIST ERROR:", error);
