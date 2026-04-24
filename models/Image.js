@@ -1,21 +1,75 @@
-//models/Image.js
-
 const mongoose = require("mongoose");
 
-const imageSchema = new mongoose.Schema({
-  patientId: mongoose.Schema.Types.ObjectId,
-  doctorId: mongoose.Schema.Types.ObjectId,
+const imageSchema = new mongoose.Schema(
+  {
+    patientName: {
+      type: String,
+      required: true,
+    },
 
-  patientName: String,
-  reportText: String,
+    patientId: {
+      type: String,
+      required: true,
+    },
 
-  originalImageUrl: String,
-  watermarkedImageUrl: String,
+    doctorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
 
-  createdAt: {
-    type: Date,
-    default: Date.now
+    uploadedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    originalImage: {
+      type: String,
+      required: true,
+    },
+
+    watermarkedImage: {
+      type: String,
+      required: true,
+    },
+
+    restoredImage: {
+      type: String,
+      default: "",
+    },
+
+    verificationResult: {
+  geometric_check: {
+    type: String,
+    default: "",
+  },
+  integrity_check: {
+    type: String,
+    default: "",
+  },
+  psnr: {
+    type: Number,
+    default: 0,
+  },
+  mse: {
+    type: Number,
+    default: 0,
+  },
+  ssim: {
+    type: Number,
+    default: 0,
+  },
+},
+
+    status: {
+      type: String,
+      default: "Pending",
+    },
+  },
+  {
+    timestamps: true,
   }
-});
+);
 
 module.exports = mongoose.model("Image", imageSchema);

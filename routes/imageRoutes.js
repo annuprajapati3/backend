@@ -1,21 +1,35 @@
-//routes/imageRoutes.js
-
 const express = require("express");
+const router = express.Router();
 const multer = require("multer");
 
 const {
-  uploadImage,
-  getImages,
-  verifyImage
+  uploadMedicalImage,
+  getDoctorImages,
+  verifyImage,
 } = require("../controllers/imageController");
 
-const protect = require("../middleware/authMiddleware"); // ✅ your existing style
-console.log("Auth Middleware Loaded:", protect); // ✅ debug log
-const router = express.Router();
-const upload = multer();
+const authMiddleware = require("../middleware/authMiddleware");
 
-router.post("/upload", protect, upload.single("file"), uploadImage);
-router.get("/list", protect, getImages);
-router.post("/verify", protect, verifyImage);
+const storage = multer.diskStorage({});
+const upload = multer({ storage });
+
+router.post(
+  "/upload",
+  authMiddleware,
+  upload.single("file"),
+  uploadMedicalImage
+);
+
+router.get(
+  "/list",
+  authMiddleware,
+  getDoctorImages
+);
+
+router.post(
+  "/verify/:id",
+  authMiddleware,
+  verifyImage
+);
 
 module.exports = router;

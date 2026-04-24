@@ -1,181 +1,184 @@
-const Image = require("../models/Image");
-const { callEmbedAPI, callExtractAPI } = require("../utils/mlServices");
-
 const fs = require("fs");
-const path = require("path");
+const axios = require("axios");
+const FormData = require("form-data");
+const cloudinary = require("cloudinary").v2;
 
-// ✅ FIXED UPLOAD DIR (IMPORTANT)
-const UPLOAD_DIR = path.join(process.cwd(), "uploads");
+const Image = require("../models/Image");
 
-// ensure uploads folder exists
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
-
-// helper for frontend URL
-const formatImageUrl = (fileName) => {
-  return `/uploads/${fileName}`;
-};
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUD_API_KEY,
+  api_secret: process.env.CLOUD_API_SECRET,
+});
 
 
 
-// ========================
-// 🔹 UPLOAD IMAGE
-// ========================
-exports.uploadImage = async (req, res) => {
+// =========================
+// Upload + Embed Watermark
+// =========================
+
+exports.uploadMedicalImage = async (req, res) => {
   try {
-    const { patientName, report, doctorId } = req.body;
-    const patientId = req.user.id || req.user._id;
+    const { patientName, doctorId, text } = req.body;
+
+    // patientId from logged-in user token
+    const patientId = req.user.id;
 
     if (!req.file) {
-      return res.status(400).json({ msg: "Image required" });
+      return res.status(400).json({
+        error: "Image file is required",
+      });
     }
+    console.log(cloudinary.config());
 
-    if (!doctorId) {
-      return res.status(400).json({ msg: "Doctor ID required" });
-    }
-
-    // 🔥 ORIGINAL FILE
-    const originalFileName =
-      Date.now() + "_original_" + req.file.originalname;
-
-    const originalPath = path.join(UPLOAD_DIR, originalFileName);
-
-    fs.writeFileSync(originalPath, req.file.buffer);
-
-    console.log("UPLOAD SUCCESS:", originalPath);
-
-    // 🔥 CALL ML EMBED
-    const watermarkedBuffer = await callEmbedAPI(req.file, report);
-
-    // 🔥 WATERMARKED FILE
-    const watermarkedFileName =
-      Date.now() + "_wm.png";
-
-    const watermarkedPath = path.join(UPLOAD_DIR, watermarkedFileName);
-
-    fs.writeFileSync(watermarkedPath, watermarkedBuffer);
-
-    // 🔥 SAVE DB (ONLY FILENAMES — IMPORTANT FIX)
-    const newImage = await Image.create({
-      patientId,
-      doctorId,
-      patientName,
-      reportText: report,
-
-      originalImageUrl: originalFileName,
-      watermarkedImageUrl: watermarkedFileName
-    });
-
-    res.json({
-      message: "Upload successful",
-      data: {
-        _id: newImage._id,
-        patientName: newImage.patientName,
-        reportText: newImage.reportText,
-
-        originalImageUrl: formatImageUrl(originalFileName),
-        watermarkedImageUrl: formatImageUrl(watermarkedFileName)
+    // Upload Original Image to Cloudinary
+    const originalUpload = await cloudinary.uploader.upload(
+      req.file.path,
+      {
+        folder: "medical-images/original",
       }
+    );
+
+    // Send image to ML API for watermark embedding
+    const form = new FormData();
+    form.append("file", fs.createReadStream(req.file.path));
+    form.append("text", text);
+
+    const embedResponse = await axios.post(
+      "https://watermarking-1-oi51.onrender.com/embed",
+      form,
+      {
+        headers: form.getHeaders(),
+        responseType: "arraybuffer",
+      }
+    );
+
+    // temp file for returned watermarked image
+    const watermarkedPath = `uploads/watermarked-${Date.now()}.png`;
+
+    fs.writeFileSync(
+      watermarkedPath,
+      embedResponse.data
+    );
+
+    // Upload Watermarked Image to Cloudinary
+    const watermarkedUpload = await cloudinary.uploader.upload(
+      watermarkedPath,
+      {
+        folder: "medical-images/watermarked",
+      }
+    );
+
+    // Save to MongoDB
+    const savedImage = await Image.create({
+      patientName,
+      patientId, // from token
+      doctorId,
+      uploadedBy: req.user.id,
+      originalImage: originalUpload.secure_url,
+      watermarkedImage: watermarkedUpload.secure_url,
+      status: "Uploaded",
     });
 
-  } catch (err) {
-    console.error("UPLOAD ERROR:", err.message);
-    res.status(500).json({ error: err.message });
+    // cleanup temp files
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    if (fs.existsSync(watermarkedPath)) {
+      fs.unlinkSync(watermarkedPath);
+    }
+
+    res.status(200).json({
+      message: "Upload successful",
+      data: savedImage,
+    });
+
+  } catch (error) {
+    console.log("UPLOAD ERROR:", error.message);
+
+    res.status(500).json({
+      error: error.message,
+    });
   }
 };
 
 
 
-// ========================
-// 🔹 VERIFY IMAGE (FIXED)
-// ========================
+// =========================
+// Doctor Dashboard Images
+// =========================
+
+exports.getDoctorImages = async (req, res) => {
+  try {
+    const images = await Image.find({
+      doctorId: req.user.id,
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json(images);
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+    });
+  }
+};
+
+
+
+// =========================
+// Verify Image
+// =========================
+
 exports.verifyImage = async (req, res) => {
   try {
-    const { imageId } = req.body;
-    const doctorId = req.user.id || req.user._id;
+    const imageId = req.params.id;
 
-    const image = await Image.findOne({
-      _id: imageId,
-      doctorId
-    });
+    const image = await Image.findById(imageId);
 
     if (!image) {
-      return res.status(403).json({ msg: "Image not found" });
-    }
-
-    // 🔥 CLEAN FILE NAMES (NO PATH BUG)
-    const originalFile = image.originalImageUrl;
-    const watermarkedFile = image.watermarkedImageUrl;
-
-    console.log("VERIFYING IMAGE:", {
-      imageId,
-      doctorId,
-      originalFile,
-      watermarkedFile
-    });
-
-    // 🔥 BUILD SAFE PATH
-    const originalPath = path.join(UPLOAD_DIR, originalFile);
-    const watermarkedPath = path.join(UPLOAD_DIR, watermarkedFile);
-
-    console.log("VERIFYING IMAGE PATHS:", { originalPath, watermarkedPath }); 
-
-    const originalExists = fs.existsSync(originalPath);
-    const watermarkedExists = fs.existsSync(watermarkedPath);
-
-    console.log("FILE EXISTENCE:", { originalExists, watermarkedExists });  
-
-    if (!originalExists || !watermarkedExists) {
-      return res.status(400).json({
-        error: "File missing for verification"
+      return res.status(404).json({
+        error: "Image not found",
       });
     }
 
-    // 🔥 CALL ML API
-    const mlRes = await callExtractAPI(originalPath, watermarkedPath);
+    const form = new FormData();
 
-    const status =
-      mlRes.integrity_check === "Authentic"
-        ? "SAFE"
-        : "TAMPERED";
+    form.append(
+      "original_file",
+      await axios.get(image.originalImage, {
+        responseType: "stream",
+      }).then(res => res.data)
+    );
 
-    res.json({
-      status,
-      details: mlRes
+    form.append(
+      "watermarked_file",
+      await axios.get(image.watermarkedImage, {
+        responseType: "stream",
+      }).then(res => res.data)
+    );
+
+    const extractResponse = await axios.post(
+      "https://watermarking-1-oi51.onrender.com/extract",
+      form,
+      {
+        headers: form.getHeaders(),
+      }
+    );
+
+    image.verificationResult = extractResponse.data;
+    image.status = "Verified";
+
+    await image.save();
+
+    res.status(200).json({
+      message: "Verification successful",
+      result: extractResponse.data,
     });
+  } catch (error) {
+    console.log("VERIFY ERROR:", error.message);
 
-  } catch (err) {
-    console.error("VERIFY ERROR:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-};
-
-
-
-// ========================
-// 🔹 GET IMAGES
-// ========================
-exports.getImages = async (req, res) => {
-  try {
-    const doctorId = req.user.id || req.user._id;
-
-    const images = await Image.find({ doctorId }).sort({ createdAt: -1 });
-
-    const formatted = images.map(img => ({
-      _id: img._id,
-      patientName: img.patientName,
-      reportText: img.reportText,
-
-      originalImageUrl: formatImageUrl(img.originalImageUrl),
-      watermarkedImageUrl: formatImageUrl(img.watermarkedImageUrl),
-
-      createdAt: img.createdAt
-    }));
-
-    res.json(formatted);
-
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({
+      error: error.message,
+    });
   }
 };
